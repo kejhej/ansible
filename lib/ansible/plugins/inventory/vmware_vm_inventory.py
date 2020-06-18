@@ -128,13 +128,14 @@ from ansible.plugins.inventory import BaseInventoryPlugin, Cacheable
 
 
 class BaseVMwareInventory:
-    def __init__(self, hostname, username, password, port, validate_certs, with_tags):
+    def __init__(self, hostname, username, password, port, validate_certs, with_tags, properties):
         self.hostname = hostname
         self.username = username
         self.password = password
         self.port = port
         self.with_tags = with_tags
         self.validate_certs = validate_certs
+        self.properties = properties
         self.content = None
         self.rest_content = None
 
@@ -239,13 +240,14 @@ class BaseVMwareInventory:
             raise AnsibleError("Missing one of the following : hostname, username, password. Please read "
                                "the documentation for more information.")
 
-    def _get_managed_objects_properties(self, vim_type, properties=None):
+    def _get_managed_objects_properties(self, vim_type):
         """
         Look up a Managed Object Reference in vCenter / ESXi Environment
         :param vim_type: Type of vim object e.g, for datacenter - vim.Datacenter
         :param properties: List of properties related to vim object e.g. Name
         :return: local content object
         """
+        properties = self.properties
         # Get Root Folder
         root_folder = self.content.rootFolder
 
@@ -338,6 +340,7 @@ class InventoryModule(BaseInventoryPlugin, Cacheable):
             port=self.get_option('port'),
             with_tags=self.get_option('with_tags'),
             validate_certs=self.get_option('validate_certs')
+            properties=self.get_option('properties')
         )
 
         self.pyv.do_login()
@@ -385,8 +388,7 @@ class InventoryModule(BaseInventoryPlugin, Cacheable):
 
         cacheable_results = {'_meta': {'hostvars': {}}}
         hostvars = {}
-        objects = self.pyv._get_managed_objects_properties(vim_type=vim.VirtualMachine,
-                                                           properties=['name'])
+        objects = self.pyv._get_managed_objects_properties(vim_type=vim.VirtualMachine)
 
         if self.pyv.with_tags:
             tag_svc = self.pyv.rest_content.tagging.Tag
